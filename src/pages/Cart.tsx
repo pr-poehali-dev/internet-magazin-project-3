@@ -4,20 +4,30 @@ import Header from '@/components/Header';
 import Icon from '@/components/ui/icon';
 import { useCart } from '@/context/CartContext';
 import { useAuth, Order } from '@/context/AuthContext';
+import { useLocationCtx } from '@/context/LocationContext';
 import { toast } from 'sonner';
 
 const Cart = () => {
   const { items, updateQuantity, removeFromCart, totalPrice, clearCart } = useCart();
   const { user, login, addOrder } = useAuth();
+  const { selectedPickup } = useLocationCtx();
   const navigate = useNavigate();
 
   const [checkout, setCheckout] = useState(false);
+  const [deliveryMethod, setDeliveryMethod] = useState<'courier' | 'pickup'>(
+    selectedPickup ? 'pickup' : 'courier'
+  );
   const [form, setForm] = useState({ name: '', email: '', address: '' });
 
-  const delivery = totalPrice >= 3000 || totalPrice === 0 ? 0 : 300;
+  const delivery =
+    deliveryMethod === 'pickup' || totalPrice >= 3000 || totalPrice === 0 ? 0 : 300;
 
   const handleOrder = (e: React.FormEvent) => {
     e.preventDefault();
+    if (deliveryMethod === 'pickup' && !selectedPickup) {
+      toast.error('Выберите пункт выдачи');
+      return;
+    }
     if (!user) login(form.email, form.name);
 
     const order: Order = {
@@ -150,17 +160,72 @@ const Cart = () => {
                   />
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-medium">
-                    Адрес доставки
-                  </label>
-                  <input
-                    required
-                    value={form.address}
-                    onChange={(e) => setForm({ ...form, address: e.target.value })}
-                    className="h-12 w-full rounded-md border border-border bg-background px-4 text-sm outline-none focus:border-foreground"
-                    placeholder="Город, улица, дом"
-                  />
+                  <label className="mb-2 block text-sm font-medium">Способ получения</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setDeliveryMethod('courier')}
+                      className={`flex items-center gap-2 rounded-md border px-4 py-3 text-sm transition-colors ${
+                        deliveryMethod === 'courier'
+                          ? 'border-primary bg-accent text-accent-foreground'
+                          : 'border-border text-muted-foreground'
+                      }`}
+                    >
+                      <Icon name="Truck" size={16} />
+                      Курьером
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeliveryMethod('pickup')}
+                      className={`flex items-center gap-2 rounded-md border px-4 py-3 text-sm transition-colors ${
+                        deliveryMethod === 'pickup'
+                          ? 'border-primary bg-accent text-accent-foreground'
+                          : 'border-border text-muted-foreground'
+                      }`}
+                    >
+                      <Icon name="Store" size={16} />
+                      Пункт выдачи
+                    </button>
+                  </div>
                 </div>
+
+                {deliveryMethod === 'courier' ? (
+                  <div>
+                    <label className="mb-2 block text-sm font-medium">
+                      Адрес доставки
+                    </label>
+                    <input
+                      required
+                      value={form.address}
+                      onChange={(e) => setForm({ ...form, address: e.target.value })}
+                      className="h-12 w-full rounded-md border border-border bg-background px-4 text-sm outline-none focus:border-foreground"
+                      placeholder="Город, улица, дом"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="mb-2 block text-sm font-medium">Пункт выдачи</label>
+                    {selectedPickup ? (
+                      <div className="flex items-center justify-between rounded-md border border-border bg-secondary/50 px-4 py-3 text-sm">
+                        <div>
+                          <p className="font-medium">{selectedPickup.name}</p>
+                          <p className="text-muted-foreground">{selectedPickup.address}</p>
+                        </div>
+                        <Link to="/pickup-points" className="text-primary underline">
+                          Изменить
+                        </Link>
+                      </div>
+                    ) : (
+                      <Link
+                        to="/pickup-points"
+                        className="flex h-12 w-full items-center justify-center gap-2 rounded-md border border-dashed border-border text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                      >
+                        <Icon name="MapPin" size={16} />
+                        Выбрать пункт выдачи
+                      </Link>
+                    )}
+                  </div>
+                )}
               </form>
             )}
           </div>
@@ -176,7 +241,11 @@ const Cart = () => {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Доставка</span>
                   <span>
-                    {delivery === 0 ? 'Бесплатно' : `${delivery} ₽`}
+                    {checkout && deliveryMethod === 'pickup'
+                      ? 'Самовывоз'
+                      : delivery === 0
+                      ? 'Бесплатно'
+                      : `${delivery} ₽`}
                   </span>
                 </div>
                 <div className="flex justify-between border-t border-border pt-3 text-base font-semibold">

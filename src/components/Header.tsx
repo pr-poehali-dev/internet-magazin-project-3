@@ -1,11 +1,20 @@
 import { Link, useNavigate } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
+import { useLocationCtx } from '@/context/LocationContext';
+import { cities } from '@/data/products';
 
 const Header = () => {
   const { totalItems } = useCart();
   const { user } = useAuth();
+  const { city, setCity } = useLocationCtx();
   const navigate = useNavigate();
 
   return (
@@ -20,11 +29,20 @@ const Header = () => {
           </span>
         </Link>
 
-        <button className="hidden items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground md:flex flex-shrink-0">
-          <Icon name="MapPin" size={16} className="text-primary" />
-          Москва
-          <Icon name="ChevronDown" size={14} />
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger className="hidden items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground md:flex flex-shrink-0 outline-none">
+            <Icon name="MapPin" size={16} className="text-primary" />
+            {city}
+            <Icon name="ChevronDown" size={14} />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            {cities.map((c) => (
+              <DropdownMenuItem key={c} onClick={() => setCity(c)}>
+                {c}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <div className="relative hidden flex-1 md:block">
           <Icon
@@ -40,6 +58,14 @@ const Header = () => {
         </div>
 
         <div className="flex flex-shrink-0 items-center gap-1">
+          <button
+            onClick={() => navigate('/pickup-points')}
+            className="hidden h-10 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground lg:flex"
+            aria-label="Пункты выдачи"
+          >
+            <Icon name="Store" size={18} />
+            ПВЗ
+          </button>
           <button
             onClick={() => navigate('/account')}
             className="flex h-10 items-center gap-2 rounded-md px-2 text-sm transition-colors hover:bg-secondary"
@@ -61,7 +87,7 @@ const Header = () => {
             )}
           </button>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/create-listing')}
             className="ml-2 hidden h-10 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 sm:flex"
           >
             <Icon name="Plus" size={16} />
