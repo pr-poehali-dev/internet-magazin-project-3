@@ -2,17 +2,49 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import ProductCard from '@/components/ProductCard';
 import Icon from '@/components/ui/icon';
-import { getProductById, getRelatedProducts } from '@/data/products';
+import { getProductById, getRelatedProducts, Product as ProductType } from '@/data/products';
 import { useCart } from '@/context/CartContext';
 import { toast } from 'sonner';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+
+const LISTINGS_URL = 'https://functions.poehali.dev/7f51f02d-a3ab-4595-875d-a6d8613537cf';
 
 const Product = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const [liked, setLiked] = useState(false);
-  const product = getProductById(Number(id));
+  const [dbProduct, setDbProduct] = useState<ProductType | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const numericId = Number(id);
+  const isDbListing = numericId > 100000;
+  const staticProduct = isDbListing ? undefined : getProductById(numericId);
+  const product = isDbListing ? dbProduct : staticProduct;
+
+  useEffect(() => {
+    if (!isDbListing) return;
+    setLoading(true);
+    fetch(LISTINGS_URL)
+      .then((res) => res.json())
+      .then((data) => {
+        const found = (data.listings || []).find(
+          (l: ProductType) => l.id + 100000 === numericId
+        );
+        setDbProduct(found ? { ...found, id: found.id + 100000 } : null);
+      })
+      .catch(() => setDbProduct(null))
+      .finally(() => setLoading(false));
+  }, [numericId, isDbListing]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-secondary/40">
+        <Header />
+        <div className="container py-24 text-center text-muted-foreground">Загрузка...</div>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -28,7 +60,7 @@ const Product = () => {
     );
   }
 
-  const related = getRelatedProducts(product);
+  const related = isDbListing ? [] : getRelatedProducts(product);
 
   const handleAdd = () => {
     addToCart(product);
@@ -52,11 +84,17 @@ const Product = () => {
           <div className="lg:col-span-2">
             <div className="overflow-hidden rounded-xl border border-border bg-card">
               <div className="aspect-[4/3] bg-secondary">
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="h-full w-full object-cover"
-                />
+                {product.image ? (
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                    <Icon name="ImageOff" size={32} />
+                  </div>
+                )}
               </div>
             </div>
 

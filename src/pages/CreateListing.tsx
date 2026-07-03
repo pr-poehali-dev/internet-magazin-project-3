@@ -1,12 +1,20 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import Icon from '@/components/ui/icon';
 import { categories } from '@/data/products';
+import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
+
+const LISTINGS_URL = 'https://functions.poehali.dev/7f51f02d-a3ab-4595-875d-a6d8613537cf';
 
 const CreateListing = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     name: '',
     category: categories[1],
@@ -16,10 +24,49 @@ const CreateListing = () => {
     condition: 'Новое',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setImagePreview(result);
+      setImageBase64(result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success('Объявление отправлено на публикацию');
-    navigate('/');
+    setSubmitting(true);
+    try {
+      const res = await fetch(LISTINGS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          price: Number(form.price),
+          category: form.category,
+          description: form.description,
+          location: form.location,
+          condition: form.condition,
+          seller: user?.name || 'Пользователь',
+          image_base64: imageBase64,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Ошибка публикации');
+      }
+
+      toast.success('Объявление опубликовано');
+      navigate('/');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Не удалось опубликовать объявление');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -115,19 +162,55 @@ const CreateListing = () => {
             />
           </div>
 
-          <div className="flex aspect-[3/1] items-center justify-center rounded-lg border-2 border-dashed border-border text-sm text-muted-foreground">
-            <div className="text-center">
-              <Icon name="ImagePlus" size={28} className="mx-auto mb-2" />
-              Добавить фото
-            </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium">Фото</label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            {imagePreview ? (
+              <div className="relative aspect-[3/1] overflow-hidden rounded-lg border border-border">
+                <img src={imagePreview} alt="Превью" className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImagePreview(null);
+                    setImageBase64(null);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                  }}
+                  className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-background/90 shadow-sm transition-colors hover:bg-background"
+                >
+                  <Icon name="X" size={16} />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex aspect-[3/1] w-full items-center justify-center rounded-lg border-2 border-dashed border-border text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              >
+                <div className="text-center">
+                  <Icon name="ImagePlus" size={28} className="mx-auto mb-2" />
+                  Добавить фото
+                </div>
+              </button>
+            )}
           </div>
 
           <button
             type="submit"
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+            disabled={submitting}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
           >
-            <Icon name="Check" size={18} />
-            Опубликовать объявление
+            {submitting ? (
+              <Icon name="Loader2" size={18} className="animate-spin" />
+            ) : (
+              <Icon name="Check" size={18} />
+            )}
+            {submitting ? 'Публикация...' : 'Опубликовать объявление'}
           </button>
         </form>
       </main>

@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Header from '@/components/Header';
 import ProductCard from '@/components/ProductCard';
 import Icon from '@/components/ui/icon';
-import { products, categories } from '@/data/products';
+import { products as staticProducts, categories, Product } from '@/data/products';
+
+const LISTINGS_URL = 'https://functions.poehali.dev/7f51f02d-a3ab-4595-875d-a6d8613537cf';
 
 const categoryIcons: Record<string, string> = {
   Все: 'LayoutGrid',
@@ -23,6 +25,20 @@ const Index = () => {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('Все');
   const [sort, setSort] = useState<'default' | 'asc' | 'desc'>('default');
+  const [dbListings, setDbListings] = useState<Product[]>([]);
+
+  useEffect(() => {
+    fetch(LISTINGS_URL)
+      .then((res) => res.json())
+      .then((data) =>
+        setDbListings(
+          (data.listings || []).map((l: Product) => ({ ...l, id: l.id + 100000 }))
+        )
+      )
+      .catch(() => setDbListings([]));
+  }, []);
+
+  const products = useMemo(() => [...dbListings, ...staticProducts], [dbListings]);
 
   const filtered = useMemo(() => {
     let result = products.filter((p) => {
