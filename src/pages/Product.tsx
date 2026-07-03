@@ -5,20 +5,22 @@ import Icon from '@/components/ui/icon';
 import { getProductById, getRelatedProducts } from '@/data/products';
 import { useCart } from '@/context/CartContext';
 import { toast } from 'sonner';
+import { useState } from 'react';
 
 const Product = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const [liked, setLiked] = useState(false);
   const product = getProductById(Number(id));
 
   if (!product) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-secondary/40">
         <Header />
         <div className="container py-24 text-center">
-          <p className="mb-4 text-muted-foreground">Товар не найден</p>
-          <Link to="/" className="text-sm underline">
+          <p className="mb-4 text-muted-foreground">Объявление не найдено</p>
+          <Link to="/" className="text-sm text-primary underline">
             Вернуться в каталог
           </Link>
         </div>
@@ -34,82 +36,135 @@ const Product = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-secondary/40">
       <Header />
 
-      <main className="container py-8">
+      <main className="container py-6">
         <button
           onClick={() => navigate(-1)}
-          className="mb-8 flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          className="mb-5 flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <Icon name="ArrowLeft" size={16} />
-          Назад
+          Назад к объявлениям
         </button>
 
-        <div className="grid gap-12 md:grid-cols-2">
-          <div className="aspect-square overflow-hidden rounded-md bg-secondary">
-            <img
-              src={product.image}
-              alt={product.name}
-              className="h-full w-full object-cover"
-            />
-          </div>
-
-          <div className="flex flex-col justify-center">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">
-              {product.category}
-            </p>
-            <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight">
-              {product.name}
-            </h1>
-            <p className="mt-4 text-2xl font-semibold">
-              {product.price.toLocaleString('ru-RU')} ₽
-            </p>
-            <p className="mt-6 leading-relaxed text-muted-foreground">
-              {product.description}
-            </p>
-
-            <div className="mt-8">
-              {product.inStock ? (
-                <button
-                  onClick={handleAdd}
-                  className="flex h-14 w-full items-center justify-center gap-2 rounded-md bg-primary text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 md:w-auto md:px-12"
-                >
-                  <Icon name="ShoppingBag" size={18} />
-                  Добавить в корзину
-                </button>
-              ) : (
-                <div className="flex h-14 items-center justify-center rounded-md bg-secondary text-sm text-muted-foreground md:w-auto md:px-12">
-                  Нет в наличии
-                </div>
-              )}
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <div className="overflow-hidden rounded-xl border border-border bg-card">
+              <div className="aspect-[4/3] bg-secondary">
+                <img
+                  src={product.image}
+                  alt={product.name}
+                  className="h-full w-full object-cover"
+                />
+              </div>
             </div>
 
-            <div className="mt-8 space-y-3 border-t border-border pt-8 text-sm text-muted-foreground">
-              <div className="flex items-center gap-3">
-                <Icon name="Truck" size={18} />
-                Бесплатная доставка от 3000 ₽
+            <div className="mt-6 rounded-xl border border-border bg-card p-6">
+              <h2 className="mb-3 font-display text-xl font-semibold">Описание</h2>
+              <p className="leading-relaxed text-foreground/80">
+                {product.description}
+              </p>
+
+              <div className="mt-6 grid grid-cols-2 gap-4 border-t border-border pt-6 text-sm sm:grid-cols-3">
+                <div>
+                  <p className="text-muted-foreground">Категория</p>
+                  <p className="font-medium">{product.category}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Состояние</p>
+                  <p className="font-medium">{product.condition}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Просмотры</p>
+                  <p className="font-medium">{product.views}</p>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <Icon name="RotateCcw" size={18} />
-                Возврат в течение 14 дней
+            </div>
+
+            {related.length > 0 && (
+              <section className="mt-8">
+                <h2 className="mb-4 font-display text-xl font-semibold tracking-tight">
+                  Похожие объявления
+                </h2>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {related.map((p) => (
+                    <ProductCard key={p.id} product={p} />
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+
+          <div className="lg:col-span-1">
+            <div className="sticky top-20 space-y-4">
+              <div className="rounded-xl border border-border bg-card p-6">
+                <div className="mb-1 flex items-start justify-between gap-2">
+                  <p className="text-3xl font-bold">
+                    {product.price.toLocaleString('ru-RU')} ₽
+                  </p>
+                  <button
+                    onClick={() => setLiked((v) => !v)}
+                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-border transition-colors hover:bg-secondary"
+                    aria-label="В избранное"
+                  >
+                    <Icon
+                      name="Heart"
+                      size={18}
+                      className={liked ? 'fill-primary text-primary' : 'text-muted-foreground'}
+                    />
+                  </button>
+                </div>
+                <h1 className="mb-3 font-display text-lg font-semibold leading-snug">
+                  {product.name}
+                </h1>
+                <div className="mb-5 space-y-1.5 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Icon name="MapPin" size={15} />
+                    {product.location}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Icon name="Clock" size={15} />
+                    {product.date}
+                  </div>
+                </div>
+
+                {product.inStock ? (
+                  <button
+                    onClick={handleAdd}
+                    className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+                  >
+                    <Icon name="ShoppingBag" size={18} />
+                    Добавить в корзину
+                  </button>
+                ) : (
+                  <div className="flex h-12 items-center justify-center rounded-lg bg-secondary text-sm text-muted-foreground">
+                    Товар продан
+                  </div>
+                )}
+                <button className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-primary text-sm font-medium text-primary transition-colors hover:bg-accent">
+                  <Icon name="MessageCircle" size={18} />
+                  Написать продавцу
+                </button>
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-6">
+                <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Продавец
+                </p>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-accent text-accent-foreground">
+                    <Icon name="Store" size={20} />
+                  </div>
+                  <div>
+                    <p className="font-medium">{product.seller}</p>
+                    <p className="text-xs text-muted-foreground">На сайте с 2023 года</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
-
-        {related.length > 0 && (
-          <section className="mt-24">
-            <h2 className="mb-8 font-display text-3xl font-semibold tracking-tight">
-              Похожие товары
-            </h2>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-10 lg:grid-cols-4">
-              {related.map((p) => (
-                <ProductCard key={p.id} product={p} />
-              ))}
-            </div>
-          </section>
-        )}
       </main>
     </div>
   );
