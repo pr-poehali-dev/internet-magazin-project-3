@@ -6,10 +6,17 @@ import { products, categories } from '@/data/products';
 
 const categoryIcons: Record<string, string> = {
   Все: 'LayoutGrid',
-  Посуда: 'Coffee',
+  Транспорт: 'Car',
+  Недвижимость: 'Home',
+  Работа: 'Briefcase',
   Электроника: 'Headphones',
-  Освещение: 'Lamp',
-  Аксессуары: 'ShoppingBag',
+  'Дом и сад': 'Lamp',
+  'Личные вещи': 'Shirt',
+  Животные: 'PawPrint',
+  'Хобби и отдых': 'Bike',
+  Услуги: 'Wrench',
+  Детям: 'Baby',
+  'Бытовая техника': 'Refrigerator',
 };
 
 const Index = () => {
